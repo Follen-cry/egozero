@@ -1,0 +1,9 @@
+[submodule "hamer"]
+	path = hamer
+	url = https://github.com/geopavlakos/hamer.git
+[submodule "Franka-Teach"]
+	path = Franka-Teach
+	url = https://github.com/NYU-robot-learning/Franka-Teach.git
+[submodule "point_policy/dift"]
+	path = point_policy/dift
+	url = https://github.com/mlevy2525/dift.git

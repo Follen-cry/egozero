@@ -1,0 +1,33 @@
+name: Code style check
+
+on:
+  pull_request:
+    branches:
+      - main  # Adjust to your default branch (e.g., master)
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'  # Use your project’s Python version
+      - name: Install Black
+        run: pip install black==25.1.0
+      - name: Run Black
+        run: black --check .  # --check flags differences without modifying files
+
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install isort
+        run: pip install isort==6.0.1
+      - name: Run isort
+        run: isort --check-only --diff .  # --check-only flags unsorted imports

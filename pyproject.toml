@@ -1,0 +1,26 @@
+[tool.black]
+line-length = 88  # Default, matches PEP 8’s recommendation; adjust if you want
+target-version = ['py310']  # Optional: specify Python version (e.g., 3.10)
+skip-string-normalization = false  # Ensures consistent string quotes (optional)
+exclude = '''
+/(
+    hamer
+  | src
+  | \.git
+  | Franka-Teach
+  | dift
+)/
+'''
+
+[tool.isort]
+profile = "black"  # Ensures compatibility with Black
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88  # Matches Black’s default
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_third_party = ["hamer", "franka_env"]
+known_first_party = ["utils", "robot_utils"]
+skip = ["Franka-Teach", "hamer", "dift", "src", ".git", "mps"]
+skip_gitignore = true

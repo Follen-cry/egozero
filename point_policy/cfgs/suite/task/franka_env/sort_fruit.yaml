@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: sort_fruit
+object_labels: [objects]
+num_object_points: 10
+
+root_dir: "/path/to/mps"
+prompts: ["a bowl.", "a white bowl.", "a lemon.", "a lime.", "a tangerine."]

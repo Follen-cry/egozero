@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: put_book
+object_labels: [objects]
+num_object_points: 8
+
+root_dir: "/path/to/mps"
+prompts: ["a black notebook.", "a blue notebook.", "a gray metal shelf.", "a gray metal book rack."]

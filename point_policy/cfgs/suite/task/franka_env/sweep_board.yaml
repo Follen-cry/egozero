@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: sweep_board
+object_labels: [objects]
+num_object_points: 8
+
+root_dir: "/path/to/mps"
+prompts: ["a black board with green tape in the middle.", "a small gray rectangular cuboid on the table.", "a small gray eraser block."]

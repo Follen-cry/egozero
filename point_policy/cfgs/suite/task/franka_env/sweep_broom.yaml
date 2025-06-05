@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: sweep_broom
+object_labels: [objects]
+num_object_points: 5
+
+root_dir: "/path/to/mps"
+prompts: ["a yellow ball.", "a yellow orange.", "a small ball.", "a green plastic cup."]

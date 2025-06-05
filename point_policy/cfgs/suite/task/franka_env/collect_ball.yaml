@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: collect_ball
+object_labels: [objects]
+num_object_points: 5
+
+root_dir: "/path/to/mps"
+prompts: ["an orange.", "a ball.", "an orange ball.", "a green cup."]

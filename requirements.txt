@@ -1,0 +1,43 @@
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1
+torchvision==0.20.1
+xformers==0.0.28.post3
+
+# for orion:
+# --extra-index-url https://download.pytorch.org/whl/cu128
+# torch==2.7.0
+# torchvision==0.22.0
+# xformers==0.0.30
+
+projectaria-tools[all]==1.5.2a1
+projectaria_client_sdk==1.1.0
+opencv-contrib-python==4.11.0.86
+fastplotlib==0.1.0a13
+glfw==2.6.2
+pygfx==0.1.14
+open3d
+einops
+easydict
+gdown
+gym==0.22.0
+gymnasium
+seaborn
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+scikit-image
+ray
+ultralytics
+record3d
+
+black==25.1.0
+isort==6.0.1
+
+huggingface_hub<0.26.0
+dm_env
+robomimic
+diffusers==0.15.0
+transformers==4.45.2
+accelerate
+git+https://github.com/mlevy2525/co-tracker.git
+ipywidgets
+ipycanvas
