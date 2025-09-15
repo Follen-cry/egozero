@@ -129,25 +129,24 @@ class AlohaEnv(gym.Env):
         )
 
         if self.use_robot:
+            # Which numeric camera IDs to expose in obs keys, and how they map to
+            # RealEnv camera names. By default, mimic FrankaEnv keys:
+            # - pixels6: overhead/high view (cam_high)
+            # - pixels3: low/front view (cam_low)
+            # - pixels4: left wrist view (cam_left_wrist)
+            # Adjust by passing a different cam_ids list if needed.
             self.cam_ids = cam_ids
-            self.image_subscribers = {}
-            if self.use_gt_depth:
-                self.depth_subscribers = {}
-            for cam_idx in self.cam_ids:
-                port = CAM_PORT + cam_idx
-                self.image_subscribers[cam_idx] = ZMQCameraSubscriber(
-                    host=INTERNET_HOST if cam_idx == 6 else HOST,
-                    port=port,
-                    topic_type="RGB",
-                )
+            self._cam_id_to_name = {
+                6: "cam_high",
+                3: "cam_low",
+                4: "cam_left_wrist",
+                # Optionally: 5x series could be added if needed in future
+            }
 
-                if self.use_gt_depth:
-                    depth_port = CAM_PORT + cam_idx + 1000  # depth offset
-                    self.depth_subscribers[cam_idx] = ZMQCameraSubscriber(
-                        host=INTERNET_HOST if cam_idx == 6 else HOST,
-                        port=depth_port,
-                        topic_type="Depth",
-                    )
+            # Initialize RealEnv via factory (no ROS node init here)
+            # NOTE: RealEnv signature is make_real_env(init_node, setup_robots=True)
+            self._real_env = make_real_env(init_node=False)
+            self._left_pose6_cache = None
 
             # Initialize RealEnv via factory; this starts ROS nodes inside
             self._real_env = make_real_env()
@@ -215,40 +214,43 @@ class AlohaEnv(gym.Env):
 
         robot_state = self.get_state()
 
-        image_list = {}
-        for cam_idx, subscriber in self.image_subscribers.items():
-            image, _ = subscriber.recv_rgb_image()
+        # Pull images directly from RealEnv (ROS image topics via CvBridge)
+        image_dict = self._safe_get_images()
 
+        # Build numeric-keyed image list consistent with FrankaEnv
+        image_list = {}
+        for cam_idx in self.cam_ids:
+            cam_name = self._cam_id_to_name.get(cam_idx)
+            if cam_name is None:
+                continue
+            img = image_dict.get(cam_name)
+            if img is None:
+                continue
             if self.crop_h is not None and self.crop_w is not None:
-                h, w, _ = image.shape
-                image = image[
+                h, w = img.shape[:2]
+                img = img[
                     int(h * self.crop_h[0]) : int(h * self.crop_h[1]),
                     int(w * self.crop_w[0]) : int(w * self.crop_w[1]),
                 ]
+            image_list[cam_idx] = img
 
-            image_list[cam_idx] = image
-
-        if self.use_gt_depth:
-            depth_list = {}
-            for cam_idx, subscriber in self.depth_subscribers.items():
-                depth, _ = subscriber.recv_depth_image()
-
-                if self.crop_h is not None and self.crop_w is not None:
-                    h, w = depth.shape
-                    depth = depth[
-                        int(h * self.crop_h[0]) : int(h * self.crop_h[1]),
-                        int(w * self.crop_w[0]) : int(w * self.crop_w[1]),
-                    ]
-
-                depth_list[cam_idx] = depth
+        # Depth not provided by RealEnv; optionally keep API but warn once
+        depth_list = None
+        if self.use_gt_depth and not hasattr(self, "_depth_warned"):
+            print("Warning: use_gt_depth requested but RealEnv does not provide depth. Skipping.")
+            self._depth_warned = True
 
         self.curr_images = image_list
 
-        obs = {"features": np.concatenate((robot_state.pos, robot_state.quat, [robot_state.gripper]))}
+        obs = {
+            "features": np.concatenate(
+                (robot_state.pos, robot_state.quat, [robot_state.gripper])
+            )
+        }
 
         for cam_idx, image in image_list.items():
             obs[f"pixels{cam_idx}"] = cv2.resize(image, (self.width, self.height))
-        if self.use_gt_depth:
+        if self.use_gt_depth and depth_list is not None:
             for cam_idx, depth in depth_list.items():
                 obs[f"depth{cam_idx}"] = cv2.resize(depth, (self.width, self.height))
 
@@ -263,39 +265,41 @@ class AlohaEnv(gym.Env):
             self.robot_state = robot_state
             print("reset done: ", robot_state)
 
-            image_list = {}
-            for cam_idx, subscriber in self.image_subscribers.items():
-                image, _ = subscriber.recv_rgb_image()
+            # Pull images via RealEnv
+            image_dict = self._safe_get_images()
 
+            image_list = {}
+            for cam_idx in self.cam_ids:
+                cam_name = self._cam_id_to_name.get(cam_idx)
+                if cam_name is None:
+                    continue
+                img = image_dict.get(cam_name)
+                if img is None:
+                    continue
                 if self.crop_h is not None and self.crop_w is not None:
-                    h, w, _ = image.shape
-                    image = image[
+                    h, w = img.shape[:2]
+                    img = img[
                         int(h * self.crop_h[0]) : int(h * self.crop_h[1]),
                         int(w * self.crop_w[0]) : int(w * self.crop_w[1]),
                     ]
+                image_list[cam_idx] = img
 
-                image_list[cam_idx] = image
-
-            if self.use_gt_depth:
-                depth_list = {}
-                for cam_idx, subscriber in self.depth_subscribers.items():
-                    depth, _ = subscriber.recv_depth_image()
-
-                    if self.crop_h is not None and self.crop_w is not None:
-                        h, w = depth.shape
-                        depth = depth[
-                            int(h * self.crop_h[0]) : int(h * self.crop_h[1]),
-                            int(w * self.crop_w[0]) : int(w * self.crop_w[1]),
-                        ]
-
-                    depth_list[cam_idx] = depth
+            # Depth not provided by RealEnv; optionally keep API but warn once
+            depth_list = None
+            if self.use_gt_depth and not hasattr(self, "_depth_warned"):
+                print("Warning: use_gt_depth requested but RealEnv does not provide depth. Skipping.")
+                self._depth_warned = True
 
             self.curr_images = image_list
 
-            obs = {"features": np.concatenate((robot_state.pos, robot_state.quat, [robot_state.gripper]))}
+            obs = {
+                "features": np.concatenate(
+                    (robot_state.pos, robot_state.quat, [robot_state.gripper])
+                )
+            }
             for cam_idx, image in image_list.items():
                 obs[f"pixels{cam_idx}"] = cv2.resize(image, (self.width, self.height))
-            if self.use_gt_depth:
+            if self.use_gt_depth and depth_list is not None:
                 for cam_idx, depth in depth_list.items():
                     obs[f"depth{cam_idx}"] = cv2.resize(depth, (self.width, self.height))
 
@@ -308,6 +312,26 @@ class AlohaEnv(gym.Env):
             if self.use_gt_depth:
                 obs["depth"] = np.zeros((self.height, self.width))
             return obs
+
+    def _safe_get_images(self):
+        """Return latest images from RealEnv, handling transient None frames.
+
+        RealEnv.ImageRecorder may briefly return None before the first frames
+        arrive. This helper normalizes to an empty dict for missing frames.
+        """
+        images = {}
+        try:
+            raw = self._real_env.get_images()
+        except Exception as e:
+            print(f"Warning: failed to fetch images from RealEnv: {e}")
+            raw = {}
+
+        if isinstance(raw, dict):
+            for k, v in raw.items():
+                if v is not None:
+                    images[k] = v
+        return images
+
 
     def render(self, mode="rgb_array", cam_idx=None, width=640, height=480):
         assert self.curr_images is not None, "Must call reset() before render()"
