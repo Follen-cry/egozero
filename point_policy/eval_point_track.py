@@ -161,7 +161,7 @@ class Workspace:
             cam_idx=6,
         )
         T_ego_to_cam4 = [
-            T_aruco_to_cam4[i] @ np.linalg.inv(T_aruco_to_ego[i])
+            T_aruco_to_cam4[i] @ np.linalg.inv(T_aruco_to_ego[i]) # TODO: replace the ego_to_cam
             for i in T_aruco_to_ego.keys()
         ]
         self.T_ego_to_cam4 = average_poses(np.stack(T_ego_to_cam4))

@@ -45,14 +45,14 @@ python -m pip cache purge
 conda clean --all -y
 
 # hamer
-cd hamer/
-bash fetch_demo_data.sh
-rm hamer_demo_data.tar.gz
-gdown "https://drive.google.com/uc?id=1x9dbp-H9u0V3j1ELu6jG6A_clLvpOfhx&confirm=t"
-mv MANO_RIGHT.pkl _DATA/data/mano/
-python -m pip install -e .[all]
-python -m pip install -v -e third-party/ViTPose
-cd ../
+#cd hamer/
+#bash fetch_demo_data.sh
+#rm hamer_demo_data.tar.gz
+#gdown "https://drive.google.com/uc?id=1x9dbp-H9u0V3j1ELu6jG6A_clLvpOfhx&confirm=t"
+#mv MANO_RIGHT.pkl _DATA/data/mano/
+#python -m pip install -e .[all]
+#python -m pip install -v -e third-party/ViTPose
+#cd ../
 
 # devignetting masks
 gdown "https://drive.google.com/uc?id=1V-MlvAgK0pBhRM53BziG4OuUFIRZkEIO&confirm=t"

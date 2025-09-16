@@ -137,7 +137,7 @@ class AlohaEnv(gym.Env):
             # Adjust by passing a different cam_ids list if needed.
             self.cam_ids = cam_ids
             self._cam_id_to_name = {
-                6: "cam_high",
+                6: "cam_high", # TODO, use high only
                 3: "cam_low",
                 4: "cam_left_wrist",
                 # Optionally: 5x series could be added if needed in future
@@ -145,11 +145,7 @@ class AlohaEnv(gym.Env):
 
             # Initialize RealEnv via factory (no ROS node init here)
             # NOTE: RealEnv signature is make_real_env(init_node, setup_robots=True)
-            self._real_env = make_real_env(init_node=False)
-            self._left_pose6_cache = None
-
-            # Initialize RealEnv via factory; this starts ROS nodes inside
-            self._real_env = make_real_env()
+            self._real_env = make_real_env(init_node=False)# TODO: modify refer to act++ code
             self._left_pose6_cache = None
 
     def get_state(self):
@@ -223,7 +219,7 @@ class AlohaEnv(gym.Env):
             cam_name = self._cam_id_to_name.get(cam_idx)
             if cam_name is None:
                 continue
-            img = image_dict.get(cam_name)
+            img = image_dict.get(cam_name) # TODO: check the keys
             if img is None:
                 continue
             if self.crop_h is not None and self.crop_w is not None:
@@ -273,7 +269,7 @@ class AlohaEnv(gym.Env):
                 cam_name = self._cam_id_to_name.get(cam_idx)
                 if cam_name is None:
                     continue
-                img = image_dict.get(cam_name)
+                img = image_dict.get(cam_name) # TODO: check keys
                 if img is None:
                     continue
                 if self.crop_h is not None and self.crop_w is not None:
