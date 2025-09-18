@@ -10,6 +10,15 @@ from aloha_ego.aloha.real_env import make_real_env
 from aloha.aloha_messages import AlohaState
 from scipy.spatial.transform import Rotation as R
 
+# Mimic how act++ imports interbotix_common_modules
+from interbotix_common_modules.common_robot.robot import (
+    create_interbotix_global_node,
+    get_interbotix_global_node,
+    robot_startup,
+)
+from interbotix_common_modules.common_robot.exceptions import InterbotixException
+
+
 # Allow overriding the internet host for camera 6 via env var
 INTERNET_HOST = os.environ.get("ALOHA_INTERNET_HOST", "10.19.143.251")
 
@@ -142,10 +151,15 @@ class AlohaEnv(gym.Env):
                 4: "cam_left_wrist",
                 # Optionally: 5x series could be added if needed in future
             }
+            
+            try:
+                node = get_interbotix_global_node()
+            except:
+                node = create_interbotix_global_node('aloha')
 
             # Initialize RealEnv via factory (no ROS node init here)
             # NOTE: RealEnv signature is make_real_env(init_node, setup_robots=True)
-            self._real_env = make_real_env(init_node=False)# TODO: modify refer to act++ code
+            self._real_env = make_real_env(node=node, setup_robots=True, setup_base=True)# DONE: modify refer to act++ code
             self._left_pose6_cache = None
 
     def get_state(self):
