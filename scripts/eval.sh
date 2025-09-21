@@ -9,9 +9,7 @@ data_dirs=(
 )
 experiment="fold_clothes"
 
-#TODO modify this path
-bc_weight="/home/david/egozero/point_policy/exp_local/2025.05.09/put_book/deterministic/194215_hidden_dim_512/snapshot/320000.pt"
-
+bc_weight="/home/aloha/egozero_ws2/src/egozero/point_policy/exp_local/fold_clothes/deterministic/124159_hidden_dim_512/snapshot/100000.pt"
 # -----------------------------------
 
 
@@ -27,7 +25,7 @@ data_dirs="[${data_dirs:1}]"  # Remove the leading comma
 
 cd point_policy/
 
-#TODO add the T_ego_to_robot_yaml argument
+
 HYDRA_FULL_ERROR=1 OC_CAUSE=1 python eval_point_track.py \
     agent=p3po \
     suite=aria \
@@ -41,6 +39,6 @@ HYDRA_FULL_ERROR=1 OC_CAUSE=1 python eval_point_track.py \
     num_queries=10 \
     suite.history=true \
     suite.history_len=10 \
-    suite.T_ego_to_robot_yaml= ????
+    suite.T_ego_to_robot_yaml=/home/aloha/egozero_ws2/install/interbotix_xsarm_perception/share/interbotix_xsarm_perception/config/static_transforms.yaml
 
 cd ../

@@ -16,14 +16,7 @@ import cv2
 import hydra
 import numpy as np
 import torch
-#TODO Load K, D from ros topic
-from franka_env.envs.franka_env import (
-    HOST,
-    INTERNET_HOST,
-    D,
-    K,
-    T_robot_to_camera,
-)
+
 from logger import Logger
 from PIL import Image
 from replay_buffer import make_expert_replay_loader
@@ -40,6 +33,31 @@ from vis_utils import add_border, detect_aruco, draw_axis, plot_points
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.backends.cudnn.benchmark = True
+
+#Import the K, D from the ROS node
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import CameraInfo
+
+rclpy.init()
+node = Node("load intrinsics")
+
+K = []
+D = []
+
+def callback(msg):
+        global K, D
+        K = list(msg.k)   # 9-element intrinsic matrix
+        D = list(msg.d)   # distortion coefficients
+        print("K:", K)
+        print("D:", D)
+        rclpy.shutdown()  # stop after first message    
+
+
+sub = node.create_subscription(CameraInfo, "/cam_d455/color/camera_info", callback, 10)
+
+rclpy.spin(node)
+node.destroy_node()
 
 
 # Load transform from YAML and compute T_ego_to_robot (4x4 matrix)
