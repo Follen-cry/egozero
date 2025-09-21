@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: pick_bread
+object_labels: [objects]
+num_object_points: 11
+
+root_dir: "/path/to/mps"
+prompts: ["an orange bread.", "a bread slice.", "a white plate."]

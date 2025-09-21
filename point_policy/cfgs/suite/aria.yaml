@@ -1,10 +1,10 @@
 # @package suite
 defaults:
   - _self_
-  - task: franka_env
+  - task: aloha_env
 
-suite: franka_env
-name: "franka_env"
+suite: aloha_env
+name: "aloha_env"
 
 # obs dims
 img_size: [720, 960]  # width, height

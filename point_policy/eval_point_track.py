@@ -23,8 +23,6 @@ from franka_env.envs.franka_env import (
     K,
     T_robot_to_camera,
 )
-from frankateach.constants import CAM_PORT
-from frankateach.network import ZMQCameraSubscriber
 from logger import Logger
 from PIL import Image
 from replay_buffer import make_expert_replay_loader
@@ -41,6 +39,59 @@ from vis_utils import add_border, detect_aruco, draw_axis, plot_points
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.backends.cudnn.benchmark = True
+
+
+# Load transform from YAML and compute T_ego_to_robot (4x4 matrix)
+import yaml
+
+def _quat_trans_to_matrix(qx: float, qy: float, qz: float, qw: float, x: float, y: float, z: float) -> np.ndarray:
+    R = Rotation.from_quat([qx, qy, qz, qw]).as_matrix()
+    T = np.eye(4, dtype=np.float64)
+    T[:3, :3] = R
+    T[:3, 3] = [x, y, z]
+    return T
+
+
+def load_T_ego_to_robot_from_yaml(filepath: str) -> np.ndarray:
+    """Load a transform from YAML and return T_ego_to_robot (4x4).
+
+    Expected YAML formats (pick first matching):
+    - Dict with keys: x, y, z, qx, qy, qz, qw
+    - Dict with nested translation {x,y,z} and quaternion {x,y,z,w} or {qx,qy,qz,qw}
+    - List of such dicts (use the first one that matches)
+    """
+    with open(os.path.expanduser(os.path.expandvars(filepath)), "r") as f:
+        data = yaml.safe_load(f)
+
+    def try_build(d):
+        if not isinstance(d, dict):
+            return None
+        # flat keys
+        flat_keys = ["x", "y", "z", "qx", "qy", "qz", "qw"]
+        if all(k in d for k in flat_keys):
+            return _quat_trans_to_matrix(d["qx"], d["qy"], d["qz"], d["qw"], d["x"], d["y"], d["z"])
+        # nested forms
+        t = d.get("translation") or d.get("t")
+        q = d.get("quaternion") or d.get("q") or d.get("rotation")
+        if isinstance(t, dict) and isinstance(q, dict):
+            # Support both {x,y,z,w} and {qx,qy,qz,qw}
+            if {"x", "y", "z", "w"}.issubset(q.keys()):
+                return _quat_trans_to_matrix(q["x"], q["y"], q["z"], q["w"], t["x"], t["y"], t["z"])
+            if {"qx", "qy", "qz", "qw"}.issubset(q.keys()):
+                return _quat_trans_to_matrix(q["qx"], q["qy"], q["qz"], q["qw"], t["x"], t["y"], t["z"])
+        return None
+
+    # If dict at top level
+    T = try_build(data)
+    if T is not None:
+        return T
+    # If list, scan for first match
+    if isinstance(data, list):
+        for item in data:
+            T = try_build(item)
+            if T is not None:
+                return T
+    raise ValueError(f"Unsupported YAML format for transform: {filepath}")
 
 
 def make_agent(obs_spec, action_spec, cfg):
@@ -81,91 +132,6 @@ class Workspace:
         self.cfg.suite.task_make_fn.max_state_dim = (
             self.expert_replay_loader.dataset._max_state_dim
         )
-
-        # read arucos in camera frame
-        arucos = [
-            dict(aruco_length=0.061, aruco_id=0),
-            dict(aruco_length=0.077, aruco_id=1),
-            # dict(aruco_length=0.077, aruco_id=2),
-        ]
-
-        def detect_arucos(
-            subscriber: ZMQCameraSubscriber, cam_idx: int, aruco_calib_duration: int = 4
-        ):
-            print(f"calibrating camera {cam_idx} to aruco tags ...")
-            aruco_frame = None
-            T_aruco_to_cam = {}
-            all_aruco_poses = defaultdict(list)
-            start = time.time()
-            while time.time() - start < aruco_calib_duration:
-                rgb, _ = subscriber.recv_rgb_image()
-                rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-                if aruco_frame is None:
-                    aruco_frame = np.copy(rgb)
-                for i, aruco in enumerate(arucos):
-                    aruco_pose = detect_aruco(
-                        rgb,
-                        K[cam_idx],
-                        D[cam_idx],
-                        aruco_length=aruco["aruco_length"],
-                        aruco_id=aruco["aruco_id"],
-                    )
-                    if aruco_pose is not None:
-                        all_aruco_poses[i].append(aruco_pose)
-
-                time.sleep(0.1)
-
-            for i, aruco_poses in all_aruco_poses.items():
-                T_aruco_to_cam[i] = average_poses(np.stack(aruco_poses))
-                aruco_frame, _ = draw_axis(
-                    aruco_frame, T_aruco_to_cam[i], K[cam_idx], D[cam_idx]
-                )
-            Image.fromarray(aruco_frame).save(f"aruco_cam{cam_idx}.png")
-            return T_aruco_to_cam
-
-        # uncomment to run detection online. camera 4 has bad viewing angle of aruco #2
-        # T_aruco_to_cam4 = detect_arucos(
-        #     ZMQCameraSubscriber(host=HOST, port=CAM_PORT + 4, topic_type="RGB"),
-        #     cam_idx=4,
-        # )
-        T_aruco_to_cam4 = {
-            0: np.array(
-                [
-                    [-0.90267725, 0.43018216, -0.01082078, 0.091753],
-                    [0.19836002, 0.39365258, -0.89760289, 0.2572377],
-                    [-0.38187312, -0.81239212, -0.44067217, 1.19706859],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
-            1: np.array(
-                [
-                    [-0.44282004, -0.89626151, -0.02501436, -0.37916767],
-                    [-0.36755235, 0.20690384, -0.90669514, 0.09390246],
-                    [0.81781152, -0.39230869, -0.42104419, 1.58441021],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
-            # 2: np.array(
-            #     [
-            #         [-0.90715477, 0.42056746, 0.01390092, -0.04422277],
-            #         [0.15628763, 0.36741282, -0.91683259, 0.00353832],
-            #         [-0.39069733, -0.82953651, -0.39902978, 1.69541575],
-            #         [0.0, 0.0, 0.0, 1.0],
-            #     ]
-            # ),
-        }
-        T_aruco_to_ego = detect_arucos(
-            ZMQCameraSubscriber(
-                host=INTERNET_HOST, port=CAM_PORT + 6, topic_type="RGB"
-            ),
-            cam_idx=6,
-        )
-        T_ego_to_cam4 = [
-            T_aruco_to_cam4[i] @ np.linalg.inv(T_aruco_to_ego[i]) # TODO: replace the ego_to_cam
-            for i in T_aruco_to_ego.keys()
-        ]
-        self.T_ego_to_cam4 = average_poses(np.stack(T_ego_to_cam4))
-        self.T_robot_to_cam4 = T_robot_to_camera[4]
 
         try:
             if self.cfg.suite.use_object_points:
@@ -232,7 +198,8 @@ class Workspace:
 
     @property
     def T_ego_to_robot(self):
-        return np.linalg.inv(self.T_robot_to_cam4) @ self.T_ego_to_cam4
+        T = load_T_ego_to_robot_from_yaml(self.cfg.suite.T_ego_to_robot_yaml)
+        return T
 
     @property
     def robot_wrist_to_eeff(self):
@@ -363,9 +330,9 @@ class Workspace:
                     time_step = self.env[env_idx].step(action)
 
                 time.sleep(1)
-                franka_state = self.env[env_idx].get_state()
-                a_pos_prev = np.array(franka_state.pos)
-                a_grip_prev = np.array(franka_state.gripper)
+                aloha_state = self.env[env_idx].get_state()
+                a_pos_prev = np.array(aloha_state.pos)
+                a_grip_prev = np.array(aloha_state.gripper)
 
                 if not self.cfg.suite.history:
 
@@ -525,9 +492,9 @@ class Workspace:
 
                             # check if the robot actually got there
                             time.sleep(0.05)
-                            franka_state = self.env[env_idx].get_state()
-                            a_pos_prev = np.array(franka_state.pos)
-                            a_grip_prev = np.array(franka_state.gripper)
+                            aloha_state_state = self.env[env_idx].get_state()
+                            a_pos_prev = np.array(aloha_state_state.pos)
+                            a_grip_prev = np.array(aloha_state_state.gripper)
                             print(np.linalg.norm(a_pos_prev - a_pos))
 
                             # just in case it didn't, assume that it did and use models' own predictions

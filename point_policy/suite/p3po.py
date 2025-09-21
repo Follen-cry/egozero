@@ -2,7 +2,7 @@ from typing import Any, NamedTuple
 
 import cv2
 import dm_env
-import franka_env
+import aloha_env
 import gym
 import numpy as np
 import torch
@@ -576,7 +576,7 @@ def make(
     prompts,
 ):
     env = gym.make(
-        "Franka-v1",
+        "Aloha-v1",
         height=height,
         width=width,
         use_robot=eval,

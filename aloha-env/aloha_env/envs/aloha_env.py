@@ -111,7 +111,7 @@ class AlohaEnv(gym.Env):
         use_gt_depth=False,
         crop_h=None,
         crop_w=None,
-        cam_ids=[3, 4, 6],
+        cam_ids=[6],
     ):
         super(AlohaEnv, self).__init__()
         self.width = width
@@ -147,8 +147,8 @@ class AlohaEnv(gym.Env):
             self.cam_ids = cam_ids
             self._cam_id_to_name = {
                 6: "cam_high", # TODO, use high only
-                3: "cam_low",
-                4: "cam_left_wrist",
+                #3: "cam_low",
+                #4: "cam_left_wrist",
                 # Optionally: 5x series could be added if needed in future
             }
             

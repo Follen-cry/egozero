@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+task_name: fold_towel
+object_labels: [objects]
+num_object_points: 6
+
+root_dir: "/path/to/mps"
+prompts: ["a towel.", "a rag.", "a cloth rag.", "a bath towel."]

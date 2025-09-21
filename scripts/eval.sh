@@ -35,13 +35,14 @@ HYDRA_FULL_ERROR=1 OC_CAUSE=1 python eval_point_track.py \
     suite=aria \
     dataloader=aria \
     eval=true \
-    suite/task/franka_env=$experiment \
+    suite/task/aloha_env=$experiment \
     data_dir=$data_dirs \
     experiment=eval_$experiment \
     bc_weight=$bc_weight \
     temporal_agg=true \
     num_queries=10 \
     suite.history=true \
-    suite.history_len=10
+    suite.history_len=10 \
+    suite.T_ego_to_robot_yaml= ????
 
 cd ../
