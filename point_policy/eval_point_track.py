@@ -34,30 +34,27 @@ from vis_utils import add_border, detect_aruco, draw_axis, plot_points
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.backends.cudnn.benchmark = True
 
-#Import the K, D from the ROS node
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import CameraInfo
 
-rclpy.init()
-node = Node("load intrinsics")
+K = np.array(
+        [
+            [386.12152099609375, 0.0, 324.1443176269531],
+            [0.0, 385.7033386230469, 243.736328125],
+            [0.0, 0.0, 1.0],
+        ]
+    )
 
-K = []
-D = []
+D = np.array(
+        [
+            [
+                -0.05693485587835312,
+                0.0698220282793045,
+                -0.0007267515175044537,
+                0.0006372604402713478,
+                -0.023148125037550926,
+            ]
+        ]
+)
 
-def callback(msg):
-        global K, D
-        K = list(msg.k)   # 9-element intrinsic matrix
-        D = list(msg.d)   # distortion coefficients
-        print("K:", K)
-        print("D:", D)
-        rclpy.shutdown()  # stop after first message    
-
-
-sub = node.create_subscription(CameraInfo, "/cam_d455/color/camera_info", callback, 10)
-
-rclpy.spin(node)
-node.destroy_node()
 
 
 # Load transform from YAML and compute T_ego_to_robot (4x4 matrix)
@@ -127,6 +124,7 @@ def make_agent(obs_spec, action_spec, cfg):
 
 class Workspace:
     def __init__(self, cfg):
+        print("Initalizing workspace")
         self.work_dir = Path.cwd()
         print(f"workspace: {self.work_dir}")
 
@@ -173,6 +171,7 @@ class Workspace:
                     )
                 self.cfg.suite.task_make_fn.points_cfg = points_cfg
         except:
+            print("fail using object points")
             pass
 
         self.env, self.task_descriptions = hydra.utils.call(self.cfg.suite.task_make_fn)
@@ -460,6 +459,11 @@ class Workspace:
                                 )
 
                             action = action.reshape(self.agent._act_dim)
+                            delta_x=np.abs(action[0]-a_pos_prev[0])
+                            delta_y=np.abs(action[1]-a_pos_prev[1])
+                            delta_z=np.abs(action[2]-a_pos_prev[2])
+                            
+                            import ipdb; ipdb.set_trace()
 
                             if self.cfg.suite.action_type == "delta":
                                 action[:3] = a_pos_prev + action[:3]
@@ -580,6 +584,7 @@ class Workspace:
 
 @hydra.main(config_path="cfgs", config_name="config_eval")
 def main(cfg):
+    print("11111")
     workspace = Workspace(cfg)
 
     # Load weights
