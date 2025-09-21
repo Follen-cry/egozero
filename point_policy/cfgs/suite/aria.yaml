@@ -2,6 +2,7 @@
 defaults:
   - _self_
   - task: aloha_env
+  - /suite@points_cfg: points_cfg
 
 suite: aloha_env
 name: "aloha_env"

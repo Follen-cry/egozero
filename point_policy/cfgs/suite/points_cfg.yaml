@@ -2,24 +2,24 @@ defaults:
   - _self_
   - task: p3po
 
-# TODO: this is hard-coded
-root_dir: null
 dift_path: point_policy/dift
-cotracker_checkpoint: ~/egozero/checkpoints/scaled_online.pth
+# TODO: modify this path to correct cotracker checkpoint
+cotracker_checkpoint: /ibex/user/cheny1b/egozero/checkpoints/scaled_online.pth
 
-prompts: []
-pixel_keys: null
-device: "cuda"
+root_dir: ${suite.task.root_dir}
+prompts: ${suite.task.prompts}
+pixel_keys: ${suite.pixel_keys}
+object_labels: ${suite.task.object_labels}
 
-width: -1
-height: -1
+device: cuda
+
+width: ${suite.img_size[0]}
+height: ${suite.img_size[1]}
 image_size_multiplier: 1
 
 ensemble_size: 8
 dift_layer: 1
 dift_steps: 50
-use_segmentation: true
+use_segmentation: false
 
-num_points: -1
-
-object_labels: null
+num_points: ${suite.num_object_points}

@@ -16,6 +16,7 @@ import cv2
 import hydra
 import numpy as np
 import torch
+#TODO Load K, D from ros topic
 from franka_env.envs.franka_env import (
     HOST,
     INTERNET_HOST,

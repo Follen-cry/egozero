@@ -7,7 +7,7 @@ defaults:
 
 # Dir
 root_dir: ~/egozero
-data_dir: /path/to/dir
+data_dir: /ibex/user/cheny1b/egozero/mps_fold_clothes_2_vrs/preprocess
 
 # misc
 seed: 2
