@@ -3,10 +3,10 @@ defaults:
   - agent: point_policy
   - suite: point_policy
   - dataloader: point_policy
-  - override hydra/launcher: submitit_local
+  - override hydra/launcher: basic
 
 # Dir
-root_dir: ~/egozero
+root_dir: ~/egozero_ws2/src/egozero
 data_dir: /path/to/expert_demos
 prompts: []
 
@@ -43,7 +43,3 @@ hydra:
   sweep:
     dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}
     subdir: ${hydra.job.num}
-  launcher:
-    tasks_per_node: 1
-    nodes: 1
-    submitit_folder: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${experiment}/.slurm

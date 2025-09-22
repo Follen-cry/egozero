@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import gym
 import numpy as np
-from aloha_ego.aloha.real_env import make_real_env
+from aloha.aloha.real_env import make_real_env
 from aloha.aloha_messages import AlohaState
 from scipy.spatial.transform import Rotation as R
 
@@ -61,7 +61,7 @@ class AlohaEnv(gym.Env):
         self.curr_images = None
 
         self.action_space = gym.spaces.Box(
-            low=-float("inf"), high=float("inf"), shape=(self.action_dim,)
+            low=-float("inf"), high=float("inf"), sAlohaShape=(self.action_dim,)
         )
         self.observation_space = gym.spaces.Box(
             low=0, high=255, shape=(height, width, self.n_channels), dtype=np.uint8
@@ -78,7 +78,7 @@ class AlohaEnv(gym.Env):
             self._cam_id_to_name = {
                 6: "cam_high", # TODO, use high only
                 #3: "cam_low",
-                #4: "cam_left_wrist",
+                #4: "cam_left_wrist",AlohaS
                 # Optionally: 5x series could be added if needed in future
             }
             
@@ -90,7 +90,7 @@ class AlohaEnv(gym.Env):
             # Initialize RealEnv via factory (no ROS node init here)
             # NOTE: RealEnv signature is make_real_env(init_node, setup_robots=True)
             self._real_env = make_real_env(node=node, setup_robots=True, setup_base=True)# DONE: modify refer to act++ code
-            self._left_pose6_cache = None
+            self._left_pose6_cache = NoneAlohaS
 
     def get_state(self):
         """Return AlohaState consistent with Franka-compatible schema.

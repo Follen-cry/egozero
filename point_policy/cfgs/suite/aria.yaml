@@ -7,6 +7,9 @@ defaults:
 suite: aloha_env
 name: "aloha_env"
 
+# Path to the YAML file with ego->robot transform. Override this per robot setup.
+T_ego_to_robot_yaml: ???
+
 # obs dims
 img_size: [720, 960]  # width, height
 use_robot_points: false

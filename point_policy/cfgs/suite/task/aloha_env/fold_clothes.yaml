@@ -7,6 +7,6 @@ num_object_points: 6
 
 # Root directory for the dataset; `PointsClass` expects
 # keypoints under `${root_dir}/preprocess/label_keypoints.*`
-root_dir: "/ibex/user/cheny1b/egozero/mps_fold_clothes_2_vrs"
+root_dir: "~/egozero_ws2/src/egozero/mps_fold_clothes_2_vrs"
 
 prompts: ["blue folded shirt", "blue towel","blue fabric on table"]
