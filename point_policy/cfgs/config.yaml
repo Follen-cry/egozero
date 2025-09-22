@@ -6,8 +6,8 @@ defaults:
   - override hydra/launcher: basic
 
 # Dir
-root_dir: ~/egozero_ws2/src/egozero
-data_dir: /ibex/user/cheny1b/egozero/mps_fold_clothes_2_vrs/preprocess
+root_dir: /home/aloha/egozero_ws2/src/egozero
+data_dir: /home/aloha/egozero/mps_fold_clothes_2_vrs/preprocess
 
 # misc
 seed: 2

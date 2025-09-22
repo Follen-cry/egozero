@@ -1,3 +1,4 @@
+import os
 from typing import Any, NamedTuple
 
 import cv2
@@ -86,16 +87,30 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
             points_cfg["root_dir"] = root_dir
             self._points_class = PointsClass(**points_cfg)
 
-        # calibration data
-        assert calib_path is not None
-        self.calibration_data = np.load(calib_path, allow_pickle=True).item()
-        self._camera_names = list(self.calibration_data.keys())
+        # calibration data (optional when using depth instead of triangulation)
+        self.calibration_data = {}
         self.camera_projections = {}
-        for camera_name in self._camera_names:
-            intrinsic = self.calibration_data[camera_name]["int"]
-            intrinsic = np.concatenate((intrinsic, np.zeros((3, 1))), axis=1)
-            extrinsic = self.calibration_data[camera_name]["ext"]
-            self.camera_projections[camera_name] = intrinsic @ extrinsic
+        self._camera_names = []
+        if calib_path:
+            if not os.path.exists(calib_path):
+                raise FileNotFoundError(
+                    f"Calibration file not found at '{calib_path}'. "
+                    "Update the config or disable triangulation by setting use_gt_depth=true or point_dim=2."
+                )
+
+            self.calibration_data = np.load(calib_path, allow_pickle=True).item()
+            self._camera_names = list(self.calibration_data.keys())
+            for camera_name in self._camera_names:
+                intrinsic = self.calibration_data[camera_name]["int"]
+                intrinsic = np.concatenate((intrinsic, np.zeros((3, 1))), axis=1)
+                extrinsic = self.calibration_data[camera_name]["ext"]
+                self.camera_projections[camera_name] = intrinsic @ extrinsic
+        else:
+            if self._point_dim == 3 and not self._use_gt_depth:
+                raise ValueError(
+                    "RGB triangulation requires a calibration file. Provide `calib_path` "
+                    "or switch to depth-based points by enabling `use_gt_depth`."
+                )
 
         obs = self._env.reset()
         if self.use_robot:
@@ -194,6 +209,10 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
                 observation[f"point_tracks_{pixel_key}"] = self._track_pts[pixel_key]
         elif self._point_dim == 3:
             if not self._use_gt_depth:
+                if not self.camera_projections:
+                    raise RuntimeError(
+                        "Camera projections unavailable. Provide calibration data to triangulate points."
+                    )
                 P, pts = [], []
                 for pixel_key in self._pixel_keys:
                     camera_name = pixelkey2camera[pixel_key]
@@ -278,6 +297,10 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         # Get 3d points from 3D depth or 2D triangulation
         if self._point_dim == 3:
             if not self._use_gt_depth:
+                if not self.camera_projections:
+                    raise RuntimeError(
+                        "Camera projections unavailable. Provide calibration data to triangulate points."
+                    )
                 P, pts = [], []
                 for pixel_key in self._pixel_keys:
                     camera_name = pixelkey2camera[pixel_key]
@@ -329,6 +352,10 @@ class RGBArrayAsObservationWrapper(dm_env.Environment):
         )
 
     def get_pixel_on_robot(self):
+        if not self.calibration_data:
+            raise RuntimeError(
+                "Projecting robot points to image requires calibration data. Provide `calib_path`."
+            )
         # get current gripper pose in robot base frame
         pos = self._current_pose[:3]
         ori = self._current_pose[3:7]  # in quat

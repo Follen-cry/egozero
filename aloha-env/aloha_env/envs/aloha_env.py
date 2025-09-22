@@ -6,8 +6,8 @@ from pathlib import Path
 import cv2
 import gym
 import numpy as np
-from aloha.aloha.real_env import make_real_env
-from aloha.aloha_messages import AlohaState
+from aloha.real_env import make_real_env
+from aloha.messages import AlohaState
 from scipy.spatial.transform import Rotation as R
 
 # Mimic how act++ imports interbotix_common_modules
@@ -41,7 +41,7 @@ class AlohaEnv(gym.Env):
         use_gt_depth=False,
         crop_h=None,
         crop_w=None,
-        cam_ids=[0],
+        cam_ids=[6],
     ):
         super(AlohaEnv, self).__init__()
         self.width = width
@@ -61,7 +61,7 @@ class AlohaEnv(gym.Env):
         self.curr_images = None
 
         self.action_space = gym.spaces.Box(
-            low=-float("inf"), high=float("inf"), sAlohaShape=(self.action_dim,)
+            low=-float("inf"), high=float("inf"), shape=(self.action_dim,)
         )
         self.observation_space = gym.spaces.Box(
             low=0, high=255, shape=(height, width, self.n_channels), dtype=np.uint8
@@ -76,10 +76,11 @@ class AlohaEnv(gym.Env):
             # Adjust by passing a different cam_ids list if needed.
             self.cam_ids = cam_ids
             self._cam_id_to_name = {
-                0: "cam_ego"
+                6: "cam_d455"
                 #6: "cam_high", 
                 #3: "cam_low",
-                #4: "cam_left_wrist",AlohaS
+                #4: "cam_left_wrist",
+                #5: "cam_right_wrist",
                 # Optionally: 5x series could be added if needed in future
             }
             
@@ -91,7 +92,7 @@ class AlohaEnv(gym.Env):
             # Initialize RealEnv via factory (no ROS node init here)
             # NOTE: RealEnv signature is make_real_env(init_node, setup_robots=True)
             self._real_env = make_real_env(node=node, setup_robots=True, setup_base=True)# DONE: modify refer to act++ code
-            self._left_pose6_cache = NoneAlohaS
+            self._left_pose6_cache = None
 
     def get_state(self):
         """Return AlohaState consistent with Franka-compatible schema.
