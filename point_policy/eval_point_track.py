@@ -34,7 +34,7 @@ from vis_utils import add_border, detect_aruco, draw_axis, plot_points
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.backends.cudnn.benchmark = True
 
-
+#Hard Coded camera intrinsics for the 6 cameras of d455
 K = np.array(
         [
             [386.12152099609375, 0.0, 324.1443176269531],
