@@ -4,8 +4,12 @@
 # ---- variables to modify here ----
 
 export CUDA_VISIBLE_DEVICES=0
+export PYTHONPATH="/home/aloha/egozero_ws2/src:/home/aloha/egozero_ws2/src/aloha:/home/aloha/egozero_ws2/src/egozero:/home/aloha/egozero_ws2/src/egozero/aloha-env:$PYTHONPATH"
+# data_dirs=(
+#     "$HOME/egozero_ws2/src/egozero/mps_fold_clothes_2_vrs/preprocess"
+# )
 data_dirs=(
-    "/ibex/user/cheny1b/egozero/mps_fold_clothes_2_vrs/preprocess"
+    "/home/aloha/egozero_ws2/src/egozero/mps_fold_clothes_2_vrs/preprocess"
 )
 experiment="fold_clothes"
 

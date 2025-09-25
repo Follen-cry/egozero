@@ -576,6 +576,13 @@ class BCDataset(IterableDataset):
                 )
                 dirs.append(demonstration_dir)
 
+        if len(actions) == 0:
+            raise ValueError(
+                "No Aria demonstrations were loaded. Check that "
+                f"the dataset exists at {preprocessed_data_dirs} and contains valid preprocess/"
+                "demonstration_* directories."
+            )
+
         grasp2depths = np.array(grasp2depths)
         grasp2dists = np.array(grasp2dists)  # shape (num_examples, num_points)
         medians = np.median(grasp2dists, axis=0)

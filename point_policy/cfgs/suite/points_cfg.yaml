@@ -1,10 +1,10 @@
 defaults:
   - _self_
-  - task: p3po
+  - /agent: p3po
 
 dift_path: point_policy/dift
 # TODO: modify this path to correct cotracker checkpoint
-cotracker_checkpoint: /ibex/user/cheny1b/egozero/checkpoints/scaled_online.pth
+cotracker_checkpoint: /home/aloha/egozero_ws2/src/egozero/checkpoints/scaled_online.pth
 
 root_dir: ${suite.task.root_dir}
 prompts: ${suite.task.prompts}

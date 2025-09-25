@@ -7,6 +7,9 @@ defaults:
 suite: aloha_env
 name: "aloha_env"
 
+# Path to the YAML file with ego->robot transform. Override this per robot setup.
+T_ego_to_robot_yaml: ???
+
 # obs dims
 img_size: [720, 960]  # width, height
 use_robot_points: false
@@ -58,7 +61,8 @@ task_make_fn:
   width: ${suite.img_size[0]}
   max_episode_len: ??? # to be specified later
   max_state_dim: ??? # to be specified later
-  calib_path: ${root_dir}/calib/0331_calib_left_demo_7.npy
+  # Optional: provide a camera calibration file when performing RGB triangulation.
+  calib_path: null
   eval: ${eval} # eval true mean use robot
   pixel_keys: ${suite.pixel_keys}
   use_robot_points: ${suite.use_robot_points}
