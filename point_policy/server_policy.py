@@ -1,0 +1,164 @@
+import dataclasses
+import enum
+import logging
+import socket
+from pathlib import Path
+
+import tyro
+from hydra import compose, initialize_config_dir
+
+from openpi.policies import policy as _policy
+from openpi.policies import policy_config as _policy_config
+from openpi.serving import websocket_policy_server
+from openpi.training import config as _config
+
+
+class EnvMode(enum.Enum):
+    """Supported environments."""
+
+    ALOHA = "aloha"
+    ALOHA_SIM = "aloha_sim"
+    TASK_ENV = "task_env"
+    DATASET_INTERABLE = "dataset_interable"
+    POLICY_AGENT = "policy_agent"
+
+    
+
+@dataclasses.dataclass
+class Checkpoint:
+    """Load a policy from a trained checkpoint."""
+
+    # Training config name (e.g., "pi0_aloha_sim").
+    config: str
+    # Checkpoint directory (e.g., "checkpoints/pi0_aloha_sim/exp/10000").
+    dir: str | None = None
+
+
+@dataclasses.dataclass
+class Default:
+    """Use the default policy for the given environment."""
+
+
+@dataclasses.dataclass
+class Args:
+    """Arguments for the serve_policy script."""
+
+    # Environment to serve the policy for. This is only used when serving default policies.
+    env: EnvMode = EnvMode.ALOHA_SIM
+
+    # If provided, will be used in case the "prompt" key is not present in the data, or if the model doesn't have a default
+    # prompt.
+    default_prompt: str | None = None
+
+    # Port to serve the policy on.
+    port: int = 8000
+    # Record the policy's behavior for debugging.
+    record: bool = False
+
+    # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
+    policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
+
+
+# Default checkpoints that should be used for each environment.
+DEFAULT_CHECKPOINT: dict[EnvMode, Checkpoint] = {
+    # TODO: add mobile_trossen
+    EnvMode.ALOHA: Checkpoint(
+        config="pi0_aloha",
+        dir="s3://openpi-assets/checkpoints/pi0_base",
+    ),
+    EnvMode.ALOHA_SIM: Checkpoint(
+        config="pi0_aloha_sim",
+        dir="s3://openpi-assets/checkpoints/pi0_aloha_sim",
+    ),
+    EnvMode.TASK_ENV: Checkpoint(
+        config="pi0_fast_droid",
+        dir=None,
+    ),
+}
+
+
+_HYDRA_CONFIG_DIR = Path(__file__).resolve().parent / "cfgs"
+_HYDRA_CONFIG_NAME = "config_eval"
+
+
+def _resolve_task_env_checkpoint_dir() -> str:
+    """Resolve the checkpoint directory for TASK_ENV via Hydra config."""
+    with initialize_config_dir(
+        config_dir=str(_HYDRA_CONFIG_DIR), job_name="server_policy_task_env"
+    ):
+        cfg = compose(config_name=_HYDRA_CONFIG_NAME)
+
+    if "bc_weight" not in cfg:
+        raise KeyError(
+            "Hydra config does not define 'bc_weight'; unable to resolve checkpoint dir"
+        )
+
+    weight_path = Path(cfg.bc_weight).expanduser()
+    if not weight_path.exists():
+        raise FileNotFoundError(
+            f"Checkpoint path from Hydra cfg does not exist: {weight_path}"
+        )
+
+    return str(weight_path if weight_path.is_dir() else weight_path.parent)
+
+
+def _resolve_checkpoint_dir(checkpoint: Checkpoint, env: EnvMode | None = None) -> str:
+    if checkpoint.dir is not None:
+        return checkpoint.dir
+
+    if env == EnvMode.TASK_ENV:
+        return _resolve_task_env_checkpoint_dir()
+
+    raise ValueError(
+        "Checkpoint directory is not specified and cannot be inferred for this environment"
+    )
+
+
+def create_default_policy(env: EnvMode, *, default_prompt: str | None = None) -> _policy.Policy:
+    """Create a default policy for the given environment."""
+    if checkpoint := DEFAULT_CHECKPOINT.get(env):
+        return _policy_config.create_trained_policy(
+            _config.get_config(checkpoint.config),
+            _resolve_checkpoint_dir(checkpoint, env),
+            default_prompt=default_prompt,
+        )
+    raise ValueError(f"Unsupported environment mode: {env}")
+
+
+def create_policy(args: Args) -> _policy.Policy:
+    """Create a policy from the given arguments."""
+    if isinstance(args.policy, Checkpoint):
+        return _policy_config.create_trained_policy(
+            _config.get_config(args.policy.config),
+            _resolve_checkpoint_dir(args.policy, args.env),
+            default_prompt=args.default_prompt,
+        )
+    if isinstance(args.policy, Default):
+        return create_default_policy(args.env, default_prompt=args.default_prompt)
+    raise TypeError(f"Unsupported policy type: {type(args.policy)!r}")
+
+
+def main(args: Args) -> None:
+    policy = create_policy(args)
+    policy_metadata = policy.metadata
+
+    # Record the policy's behavior.
+    if args.record:
+        policy = _policy.PolicyRecorder(policy, "policy_records")
+
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    logging.info("Creating server (host: %s, ip: %s)", hostname, local_ip)
+
+    server = websocket_policy_server.WebsocketPolicyServer(
+        policy=policy,
+        host="0.0.0.0",
+        port=args.port,
+        metadata=policy_metadata,
+    )
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, force=True)
+    main(tyro.cli(Args))
